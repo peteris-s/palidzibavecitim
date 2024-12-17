@@ -10,12 +10,18 @@ $db = new Database($config["database"]);
 $children = $db->query("SELECT * FROM children")->fetchAll();
 $letters = $db->query("SELECT * FROM letters")->fetchAll();
 
+// Fetch gift names from the database
+$gifts = $db->query("SELECT * FROM gifts")->fetchAll();
+$gift_names = array_map(function($gift) {
+    return $gift['name'];
+}, $gifts);
+
 // Start outputting HTML and CSS directly from PHP
 echo '<style>
     /* General card container styling */
     .card-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Default responsive grid */
         gap: 20px;
         padding: 20px;
         justify-items: center;
@@ -124,6 +130,13 @@ echo '<style>
         min-height: 100%; /* Make sure content wrapper covers the full height */
         padding-bottom: 50px; /* To ensure that the snowflakes are still visible at the bottom */
     }
+
+    /* Media query for mobile devices (max-width: 768px) */
+    @media (max-width: 768px) {
+        .card-container {
+            grid-template-columns: 1fr; /* One card per row on mobile */
+        }
+    }
 </style>';
 
 echo "<div class='content-wrapper'>";  // Wrap content to allow scrolling
@@ -135,7 +148,7 @@ foreach ($children as $child) {
     // Fetch the letter for the current child
     $sender_id = $child["id"];
     $letter = null;
-    
+
     // Search for the letter for this specific child
     foreach ($letters as $l) {
         if ($l["sender_id"] == $sender_id) {
@@ -151,15 +164,32 @@ foreach ($children as $child) {
     
     // Display the letter content if it exists, otherwise show a message
     if ($letter) {
+        // Highlight the gift names in the letter
+        $letter_text = htmlspecialchars($letter["letter_text"]);
+        foreach ($gift_names as $gift) {
+            // Highlight the gift name (case-insensitive)
+            $letter_text = preg_replace('/\b' . preg_quote($gift, '/') . '\b/i', '<span style="background-color: green; font-weight: bold;">' . $gift . '</span>', $letter_text);
+        }
+
         echo "<div class='letter-content'>";
-        echo "<strong>Letter to Santa:</strong><p>" . nl2br(htmlspecialchars($letter["letter_text"])) . "</p>";
+        echo "<strong>Letter to Santa:</strong><p>" . nl2br($letter_text) . "</p>";
         echo "</div>";
+
+        // Display the full list of wishes (gifts)
+        echo "<h4></h4><ul>";
+        foreach ($gift_names as $gift) {
+            if (stripos($letter["letter_text"], $gift) !== false) {  // Check if the gift is mentioned in the letter
+                echo "<li>" . $gift . "</li>";
+            }
+        }
+        echo "</ul>";
+
     } else {
         echo "<div class='letter-content no-letter'>";
         echo "<strong>No letter found for this child.</strong>";
         echo "</div>";
     }
-    
+
     echo "</div>"; // Close the card div
 }
 

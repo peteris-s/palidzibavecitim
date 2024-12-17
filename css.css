@@ -1,0 +1,6 @@
+/* Media query for mobile devices (max-width: 768px) */
+@media (max-width: 768px) {
+    .card-container {
+        grid-template-columns: 1fr; /* One card per row on mobile */
+    }
+}
